@@ -1,0 +1,108 @@
+version: "3.8"
+services:
+    traefik:
+        image: traefik:v2.9
+        container_name: traefik
+        command:
+            - "--api.insecure=true"
+            - "--providers.docker=true"
+            - "--entrypoints.web.address=:80"
+        ports:
+            - "80:80"
+            - "8080:8080"  # Traefik dashboard
+        volumes:
+            - "/var/run/docker.sock:/var/run/docker.sock:ro"
+        networks:
+            - spring-network
+
+    ressources-relationnelles:
+        container_name: ressources-relationnelles
+        build:
+            context: ressourcesRelationnelles/.
+            dockerfile: Dockerfile
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.ressources-relationnelles.rule=Host(`ressources.localhost`)"
+            - "traefik.http.services.ressources-relationnelles.loadbalancer.server.port=8080"
+        restart: unless-stopped
+        networks:
+            - spring-network
+        depends_on:
+            mysql-server:
+                condition: service_healthy
+            
+    mysql-server:
+        image: mysql:8.0.17
+        restart: unless-stopped
+        environment:
+          MYSQL_ROOT_PASSWORD: nuiivozer4896gre89g9er
+        ports:
+          - "3307:3306"
+        volumes:
+            - ./mysql_server/data:/var/lib/mysql
+            - "./mysql_server/mysql/script.sql:/docker-entrypoint-initdb.d/1.sql"
+        container_name: mysql_server
+        networks:
+            - spring-network
+        healthcheck:
+            test: ["CMD", "mysqladmin", "ping", "--silent"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
+    mysql-backup:
+        image: mysql:8.0.17
+        restart: unless-stopped
+        environment:
+            MYSQL_ROOT_PASSWORD: nuiivozer4896gre89g9er
+        volumes:
+            - ./mysql_server/backup:/backup
+            - ./backup-scripts:/scripts
+        networks:
+            - spring-network
+        depends_on:
+            - mysql-server
+        entrypoint: /scripts/backup.sh
+
+    apache-frontend:
+        container_name: apache-frontend
+        build:
+            context: frontend/.
+            dockerfile: Dockerfile
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.apache-frontend.rule=Host(`frontend.localhost`)"
+            - "traefik.http.services.apache-frontend.loadbalancer.server.port=80"
+            - "traefik.http.routers.apache-frontend.entrypoints=web"
+        restart: unless-stopped
+        networks:
+            - spring-network
+        healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost/"]
+            interval: 5s
+            timeout: 10s
+            start_period: 5s
+            retries: 3
+        depends_on:
+            - ressources-relationnelles
+
+    phpmyadmin:
+        image: phpmyadmin/phpmyadmin
+        container_name: phpmyadmin
+        environment:
+            PMA_HOST: mysql-server
+            MYSQL_ROOT_PASSWORD: nuiivozer4896gre89g9er
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.phpmyadmin.rule=Host(`phpmyadmin.localhost`)"
+            - "traefik.http.services.phpmyadmin.loadbalancer.server.port=80"
+        restart: unless-stopped
+        networks:
+            - spring-network
+        depends_on:
+            mysql-server:
+                condition: service_healthy
+
+networks:
+    spring-network:
+        driver: bridge
