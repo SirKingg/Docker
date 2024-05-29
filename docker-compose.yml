@@ -22,7 +22,7 @@ services:
             dockerfile: Dockerfile
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.ressources-relationnelles.rule=Host(`ressources.localhost`)"
+            - "traefik.http.routers.ressources-relationnelles.rule=Host(`ressources.local`)"
             - "traefik.http.services.ressources-relationnelles.loadbalancer.server.port=8080"
         restart: unless-stopped
         networks:
@@ -50,20 +50,6 @@ services:
             timeout: 5s
             retries: 5
 
-    mysql-backup:
-        image: mysql:8.0.17
-        restart: unless-stopped
-        environment:
-            MYSQL_ROOT_PASSWORD: nuiivozer4896gre89g9er
-        volumes:
-            - ./mysql_server/backup:/backup
-            - ./backup-scripts:/scripts
-        networks:
-            - spring-network
-        depends_on:
-            - mysql-server
-        entrypoint: /scripts/backup.sh
-
     apache-frontend:
         container_name: apache-frontend
         build:
@@ -71,7 +57,7 @@ services:
             dockerfile: Dockerfile
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.apache-frontend.rule=Host(`frontend.localhost`)"
+            - "traefik.http.routers.apache-frontend.rule=Host(`frontend.local`)"
             - "traefik.http.services.apache-frontend.loadbalancer.server.port=80"
             - "traefik.http.routers.apache-frontend.entrypoints=web"
         restart: unless-stopped
@@ -94,7 +80,7 @@ services:
             MYSQL_ROOT_PASSWORD: nuiivozer4896gre89g9er
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.phpmyadmin.rule=Host(`phpmyadmin.localhost`)"
+            - "traefik.http.routers.phpmyadmin.rule=Host(`phpmyadmin.local`)"
             - "traefik.http.services.phpmyadmin.loadbalancer.server.port=80"
         restart: unless-stopped
         networks:

@@ -13,7 +13,7 @@ import router from './router'
 
 const app = createApp(App).use(store).use(router)
 
-app.config.globalProperties.api_path = "http://ressources.localhost/"
+app.config.globalProperties.api_path = "http://ressources.local/"
 // PUBLIC
 app.config.globalProperties.route_login = "api/public/login"
 app.config.globalProperties.route_register = "api/public/register"
